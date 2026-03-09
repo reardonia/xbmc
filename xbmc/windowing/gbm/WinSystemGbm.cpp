@@ -479,25 +479,14 @@ void CWinSystemGbm::SetColorimetry(const VideoPicture* videoPicture)
   KODI::UTILS::Colorimetry colorimetry = KODI::UTILS::Colorimetry::DEFAULT;
 
   if (videoPicture)
-  {
     colorimetry = KODI::UTILS::GetColorimetry(*videoPicture);
-
-    // Infer from resolution when unspecified
-    if (colorimetry == KODI::UTILS::Colorimetry::DEFAULT &&
-        videoPicture->iWidth > 0)
-    {
-      if (videoPicture->iWidth >= 1280 || videoPicture->iHeight >= 720)
-        colorimetry = KODI::UTILS::Colorimetry::BT709_YCC;
-      else
-        colorimetry = KODI::UTILS::Colorimetry::SMPTE_170M_YCC;
-    }
-  }
 
   std::optional<uint64_t> colorspace =
       connector->GetPropertyValue("Colorspace", ColorimetryMap.at(colorimetry));
   if (colorspace)
   {
-    CLog::LogF(LOGDEBUG, "setting connector colorspace to {}", ColorimetryMap.at(colorimetry));
+    CLog::LogF(LOGDEBUG, "setting connector colorspace to {}",
+               KODI::UTILS::ColorimetryToString(colorimetry));
     drm->AddProperty(connector, "Colorspace", colorspace.value());
     drm->SetActive(true);
   }
