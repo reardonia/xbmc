@@ -133,6 +133,9 @@ bool CLinuxRendererGLES::Configure(const VideoPicture &picture, float fps, unsig
   // setup the background colour
   m_clearColour = CServiceBroker::GetWinSystem()->UseLimitedColor() ? (16.0f / 0xff) : 0.0f;
 
+  // TODO: maybe should verify with SupportsColorimetry() first?
+  CServiceBroker::GetWinSystem()->SetColorimetry(&picture);
+
   if (picture.color_transfer == AVCOL_TRC_SMPTE2084 ||
       picture.color_transfer == AVCOL_TRC_ARIB_STD_B67)
   {
@@ -793,6 +796,7 @@ void CLinuxRendererGLES::UnInit()
   m_bValidated = false;
   m_bConfigured = false;
 
+  CServiceBroker::GetWinSystem()->SetColorimetry(nullptr);
   CServiceBroker::GetWinSystem()->SetHDR(nullptr);
   m_passthroughHDR = false;
 }

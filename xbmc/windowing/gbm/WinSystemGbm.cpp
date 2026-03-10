@@ -72,14 +72,21 @@ namespace
 
 constexpr auto ColorimetryMap = make_map<KODI::UTILS::Colorimetry, std::string_view>({
     {KODI::UTILS::Colorimetry::DEFAULT, "Default"},
+    {KODI::UTILS::Colorimetry::SMPTE_170M_YCC, "SMPTE_170M_YCC"},
+    {KODI::UTILS::Colorimetry::BT709_YCC, "BT709_YCC"},
     {KODI::UTILS::Colorimetry::XVYCC_601, "XVYCC_601"},
     {KODI::UTILS::Colorimetry::XVYCC_709, "XVYCC_709"},
     {KODI::UTILS::Colorimetry::SYCC_601, "SYCC_601"},
     {KODI::UTILS::Colorimetry::OPYCC_601, "opYCC_601"},
     {KODI::UTILS::Colorimetry::OPRGB, "opRGB"},
     {KODI::UTILS::Colorimetry::BT2020_CYCC, "BT2020_CYCC"},
-    {KODI::UTILS::Colorimetry::BT2020_YCC, "BT2020_YCC"},
     {KODI::UTILS::Colorimetry::BT2020_RGB, "BT2020_RGB"},
+    {KODI::UTILS::Colorimetry::BT2020_YCC, "BT2020_YCC"},
+    {KODI::UTILS::Colorimetry::DCI_P3_RGB_D65, "DCI-P3_RGB_D65"},
+    {KODI::UTILS::Colorimetry::DCI_P3_RGB_THEATER, "DCI-P3_RGB_Theater"},
+    {KODI::UTILS::Colorimetry::RGB_WIDE_FIXED, "RGB_WIDE_FIXED"},
+    {KODI::UTILS::Colorimetry::RGB_WIDE_FLOAT, "RGB_WIDE_FLOAT"},
+    {KODI::UTILS::Colorimetry::BT601_YCC, "BT601_YCC"},
     {KODI::UTILS::Colorimetry::ST2113_RGB, "Default"},
     {KODI::UTILS::Colorimetry::ICTCP, "Default"},
 });
@@ -164,6 +171,7 @@ bool CWinSystemGbm::InitWindowSystem()
   if (setting)
     setting->SetVisible(true);
 
+  SetColorimetry(nullptr);
   SetHDR(nullptr);
 
   CLog::Log(LOGDEBUG, "CWinSystemGbm::{} - initialized DRM", __FUNCTION__);
@@ -359,19 +367,9 @@ bool CWinSystemGbm::SetHDR(const VideoPicture* videoPicture)
 
   if (!videoPicture)
   {
-    if (connector->SupportsProperty("Colorspace"))
-    {
-      std::optional<uint64_t> colorspace = connector->GetPropertyValue("Colorspace", "Default");
-      if (colorspace)
-      {
-        CLog::LogF(LOGDEBUG, "setting connector colorspace to Default");
-        drm->AddProperty(connector, "Colorspace", colorspace.value());
-        drm->SetActive(true);
-      }
-    }
-
     if (connector->SupportsProperty("HDR_OUTPUT_METADATA"))
     {
+      CLog::LogF(LOGDEBUG, "clearing HDR_OUTPUT_METADATA");
       drm->AddProperty(connector, "HDR_OUTPUT_METADATA", 0);
       drm->SetActive(true);
 
@@ -381,21 +379,6 @@ bool CWinSystemGbm::SetHDR(const VideoPicture* videoPicture)
     }
 
     return false;
-  }
-
-  KODI::UTILS::Colorimetry colorimetry = KODI::UTILS::GetColorimetry(*videoPicture);
-
-  if (connector->SupportsProperty("Colorspace") && m_info &&
-      m_info->SupportsColorimetry(colorimetry))
-  {
-    std::optional<uint64_t> colorspace =
-        connector->GetPropertyValue("Colorspace", ColorimetryMap.at(colorimetry));
-    if (colorspace)
-    {
-      CLog::LogF(LOGDEBUG, "setting connector colorspace to {}", ColorimetryMap.at(colorimetry));
-      drm->AddProperty(connector, "Colorspace", colorspace.value());
-      drm->SetActive(true);
-    }
   }
 
   KODI::UTILS::Eotf eotf = KODI::UTILS::GetEOTF(*videoPicture);
@@ -481,6 +464,43 @@ bool CWinSystemGbm::SetHDR(const VideoPicture* videoPicture)
   }
 
   return m_hdr_blob_id != 0;
+}
+
+void CWinSystemGbm::SetColorimetry(const VideoPicture* videoPicture)
+{
+  auto drm = std::dynamic_pointer_cast<CDRMAtomic>(m_DRM);
+  if (!drm)
+    return;
+
+  auto connector = drm->GetConnector();
+  if (!connector || !connector->SupportsProperty("Colorspace"))
+    return;
+
+  KODI::UTILS::Colorimetry colorimetry = KODI::UTILS::Colorimetry::DEFAULT;
+
+  if (videoPicture)
+  {
+    colorimetry = KODI::UTILS::GetColorimetry(*videoPicture);
+
+    // Infer from resolution when unspecified
+    if (colorimetry == KODI::UTILS::Colorimetry::DEFAULT &&
+        videoPicture->iWidth > 0)
+    {
+      if (videoPicture->iWidth >= 1280 || videoPicture->iHeight >= 720)
+        colorimetry = KODI::UTILS::Colorimetry::BT709_YCC;
+      else
+        colorimetry = KODI::UTILS::Colorimetry::SMPTE_170M_YCC;
+    }
+  }
+
+  std::optional<uint64_t> colorspace =
+      connector->GetPropertyValue("Colorspace", ColorimetryMap.at(colorimetry));
+  if (colorspace)
+  {
+    CLog::LogF(LOGDEBUG, "setting connector colorspace to {}", ColorimetryMap.at(colorimetry));
+    drm->AddProperty(connector, "Colorspace", colorspace.value());
+    drm->SetActive(true);
+  }
 }
 
 bool CWinSystemGbm::IsHDRDisplay()

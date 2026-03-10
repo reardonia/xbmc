@@ -221,6 +221,7 @@ public:
    *
    */
   virtual bool SetHDR(const VideoPicture* videoPicture) { return false; }
+  virtual void SetColorimetry(const VideoPicture* videoPicture) {}
   virtual bool IsHDRDisplay() { return false; }
   virtual HDR_STATUS ToggleHDR() { return HDR_STATUS::HDR_UNSUPPORTED; }
   virtual HDR_STATUS GetOSHDRStatus() { return HDR_STATUS::HDR_UNSUPPORTED; }
