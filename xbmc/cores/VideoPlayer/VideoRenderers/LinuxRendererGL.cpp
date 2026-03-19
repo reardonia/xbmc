@@ -265,6 +265,10 @@ bool CLinuxRendererGL::Configure(const VideoPicture &picture, float fps, unsigne
               m_passthroughHDR ? "on" : "off");
   }
 
+  // Upgrade render surface to 10-bit for 10-bit content on single-plane
+  if (picture.colorBits > 8)
+    CServiceBroker::GetWinSystem()->RecreateGuiSurface(true);
+
   // load 3DLUT
   if (m_ColorManager->IsEnabled())
   {
@@ -1078,6 +1082,9 @@ void CLinuxRendererGL::UnInit()
 
   CServiceBroker::GetWinSystem()->SetHDR(nullptr);
   m_passthroughHDR = false;
+
+  // Revert render surface to 8-bit
+  CServiceBroker::GetWinSystem()->RecreateGuiSurface(false);
 }
 
 bool CLinuxRendererGL::Render(unsigned int flags, int renderBuffer)
