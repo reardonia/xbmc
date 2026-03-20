@@ -269,6 +269,12 @@ bool CLinuxRendererGL::Configure(const VideoPicture &picture, float fps, unsigne
   if (picture.colorBits > 8)
     CServiceBroker::GetWinSystem()->RecreateGuiSurface(true);
 
+  m_hdrFboActive =
+      m_passthroughHDR && CServiceBroker::GetWinSystem()->SetGuiCompositing(m_passthroughHDR);
+  if (m_passthroughHDR && !m_hdrFboActive)
+    CLog::Log(LOGWARNING, "LinuxRendererGL::Configure: HDR passthrough active but GUI "
+                          "compositing not supported by windowing system");
+
   // load 3DLUT
   if (m_ColorManager->IsEnabled())
   {
@@ -1083,8 +1089,16 @@ void CLinuxRendererGL::UnInit()
   CServiceBroker::GetWinSystem()->SetHDR(nullptr);
   m_passthroughHDR = false;
 
+  m_hdrFboActive = false;
+  CServiceBroker::GetWinSystem()->SetGuiCompositing(false);
+
   // Revert render surface to 8-bit
   CServiceBroker::GetWinSystem()->RecreateGuiSurface(false);
+}
+
+bool CLinuxRendererGL::IsGuiLayer()
+{
+  return !m_hdrFboActive;
 }
 
 bool CLinuxRendererGL::Render(unsigned int flags, int renderBuffer)
