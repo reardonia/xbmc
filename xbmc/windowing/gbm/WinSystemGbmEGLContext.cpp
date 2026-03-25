@@ -197,8 +197,9 @@ bool CWinSystemGbmEGLContext::SetVideoOutput(const VideoPicture* videoPicture)
   // backends we additionally rebuild the GBM and EGL output surface
   // to a wider format (e.g. AR24 -> AR30) when the video needs more
   // than 8-bit through the single output plane, then chain to the
-  // base so plane-role tracking sees the new format. The EGL context
-  // survives across the rebuild -- no shader recompile, no modeset.
+  // base so plane-role tracking sees the new format. EGL context survives
+  // across the rebuild, no shader-rebuild. The next flip forces a modeset
+  // when needed (amdgpu), on other drivers it is a fast flip."
   const int bitDepth = videoPicture ? videoPicture->colorBits : 8;
 
   // Pick an EGL config matching the target bit depth, then rebuild
@@ -255,6 +256,7 @@ bool CWinSystemGbmEGLContext::SetVideoOutput(const VideoPicture* videoPicture)
 
     CLog::LogF(LOGINFO, "Output surface recreated at {}-bit", bitDepth);
 
+<<<<<<< HEAD
     // amdgpu disables the CRTC when RMFB removes a still-bound FB during
     // surface destroy (primary-plane invariant). Force a full modeset on
     // the next commit to re-enable the CRTC. No-op on drivers without the
@@ -266,6 +268,11 @@ bool CWinSystemGbmEGLContext::SetVideoOutput(const VideoPicture* videoPicture)
     // modifier to decide which DRM plane satisfies the new role.
     // After a surface rebuild that cache is stale, so refresh it
     // from the just-locked GBM front buffer before chaining.
+=======
+    // Refresh the active plane's cached format/modifier so the chained
+    // base SetVideoOutput sees the just-recreated surface (otherwise the
+    // base reads stale values from the previous format).
+>>>>>>> 02992cba8f (GBM/EGL: extend SetVideoOutput to manage output surface bit depth)
     if (auto* plane = m_DRM->GetGuiPlane() ? m_DRM->GetGuiPlane() : m_DRM->GetVideoPlane())
     {
       if (struct gbm_bo* bo = m_GBM->GetDevice().GetSurface().LockFrontBuffer().Get())
@@ -280,8 +287,14 @@ bool CWinSystemGbmEGLContext::SetVideoOutput(const VideoPicture* videoPicture)
     }
   }
 
+<<<<<<< HEAD
   // Dispatch to FindVideoPlane (videoPicture set) or FindGuiPlane
   // using the now-current plane format.
+=======
+  // Chain to base for the plane-find part: routes through FindVideoPlane
+  // (videoPicture set) or FindGuiPlane (nullptr) using the now-current
+  // cached format/modifier on the active plane.
+>>>>>>> 02992cba8f (GBM/EGL: extend SetVideoOutput to manage output surface bit depth)
   return CWinSystemGbm::SetVideoOutput(videoPicture);
 }
 
