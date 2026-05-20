@@ -9,6 +9,7 @@
 #include "WinSystemGbmGLContext.h"
 
 #include "OptionalsReg.h"
+#include "ServiceBroker.h"
 #include "cores/RetroPlayer/process/gbm/RPProcessInfoGbm.h"
 #include "cores/RetroPlayer/rendering/VideoRenderers/RPRendererDMAOpenGL.h"
 #include "cores/RetroPlayer/rendering/VideoRenderers/RPRendererOpenGL.h"
@@ -17,6 +18,8 @@
 #include "cores/VideoPlayer/VideoRenderers/RenderFactory.h"
 #include "rendering/gl/GuiCompositeShaderGL.h"
 #include "rendering/gl/ScreenshotSurfaceGL.h"
+#include "settings/Settings.h"
+#include "settings/SettingsComponent.h"
 #include "utils/BufferObjectFactory.h"
 #include "utils/DMAHeapBufferObject.h"
 #include "utils/DumbBufferObject.h"
@@ -211,6 +214,10 @@ bool CWinSystemGbmGLContext::SetGuiCompositing(int colorTransfer)
   // TODO: add CreateLUTs(colorTransfer) support to GL composite shader to match
   // GLES (WinSystemGbmGLESContext). Currently GL only handles PQ via pow shader;
   // HLG and LUT-based PQ are not yet implemented.
+  if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+          CSettings::SETTING_VIDEOPLAYER_DISABLEHDRCOMPOSITING))
+    colorTransfer = 0;
+
   m_guiCompositing = (colorTransfer != 0);
 
   if (m_guiCompositing)
@@ -309,7 +316,9 @@ void CWinSystemGbmGLContext::CompositeGui()
   GLfloat proj[16] = {2.0f / w, 0, 0, 0, 0, -2.0f / h, 0, 0, 0, 0, -1, 0, -1.0f, 1.0f, 0, 1};
 
   m_compositeShader->SetProjection(proj);
-  m_compositeShader->SetSdrPeak(203.0f / 10000.0f);
+  m_compositeShader->SetSdrPeak(CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+                                    CSettings::SETTING_VIDEOPLAYER_GUIHDRPEAKLUMINANCE) /
+                                10000.0f);
   m_compositeShader->Enable();
 
   GLint posLoc = m_compositeShader->GetPosLoc();

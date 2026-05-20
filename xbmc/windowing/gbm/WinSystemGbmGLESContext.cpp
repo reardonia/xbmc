@@ -9,6 +9,7 @@
 #include "WinSystemGbmGLESContext.h"
 
 #include "OptionalsReg.h"
+#include "ServiceBroker.h"
 #include "cores/RetroPlayer/process/gbm/RPProcessInfoGbm.h"
 #include "cores/RetroPlayer/rendering/VideoRenderers/RPRendererDMAOpenGLES.h"
 #include "cores/RetroPlayer/rendering/VideoRenderers/RPRendererOpenGLES.h"
@@ -21,6 +22,8 @@
 #include "cores/VideoPlayer/VideoRenderers/RenderFactory.h"
 #include "rendering/gles/GuiCompositeShaderGLES.h"
 #include "rendering/gles/ScreenshotSurfaceGLES.h"
+#include "settings/Settings.h"
+#include "settings/SettingsComponent.h"
 
 extern "C"
 {
@@ -194,6 +197,10 @@ void CWinSystemGbmGLESContext::PresentRender(bool rendered, bool videoLayer)
 
 bool CWinSystemGbmGLESContext::SetGuiCompositing(int colorTransfer)
 {
+  if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+          CSettings::SETTING_VIDEOPLAYER_DISABLEHDRCOMPOSITING))
+    colorTransfer = 0;
+
   m_guiCompositing = (colorTransfer != 0);
 
   if (m_guiCompositing)
@@ -213,6 +220,9 @@ bool CWinSystemGbmGLESContext::SetGuiCompositing(int colorTransfer)
       }
     }
 
+    m_compositeShader->SetSdrPeak(CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+                                      CSettings::SETTING_VIDEOPLAYER_GUIHDRPEAKLUMINANCE) /
+                                  10000.0f);
     if (!m_compositeShader->CreateLUTs(colorTransfer))
     {
       CLog::Log(LOGERROR, "CWinSystemGbmGLESContext: failed to create LUTs");

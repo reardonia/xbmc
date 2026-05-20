@@ -132,6 +132,10 @@ public:
   static constexpr auto SETTING_VIDEOPLAYER_USEVTB = "videoplayer.usevtb";
   static constexpr auto SETTING_VIDEOPLAYER_USEPRIMEDECODER = "videoplayer.useprimedecoder";
   static constexpr auto SETTING_VIDEOPLAYER_USEPRIMERENDERER = "videoplayer.useprimerenderer";
+  static constexpr auto SETTING_VIDEOPLAYER_GUIHDRPEAKLUMINANCE =
+      "videoplayer.guihdrpeakluminance";
+  static constexpr auto SETTING_VIDEOPLAYER_DISABLEHDRCOMPOSITING =
+      "videoplayer.disablehdrcompositing";
   static constexpr auto SETTING_VIDEOPLAYER_USESTARFISHDECODER = "videoplayer.usestarfishdecoder";
   static constexpr auto SETTING_VIDEOPLAYER_USESTAGEFRIGHT = "videoplayer.usestagefright";
   static constexpr auto SETTING_VIDEOPLAYER_LIMITGUIUPDATE = "videoplayer.limitguiupdate";
