@@ -240,10 +240,12 @@ bool CWinSystemGbmGLContext::SetGuiCompositing(int colorTransfer)
   return m_guiCompositing;
 }
 
-bool CWinSystemGbmGLContext::BeginGuiComposite()
+bool CWinSystemGbmGLContext::BeginGuiComposite(bool guiWillRender)
 {
   if (!m_guiCompositing)
     return false;
+
+  m_guiWillRender = guiWillRender;
 
   int width = m_nWidth;
   int height = m_nHeight;
@@ -272,6 +274,11 @@ bool CWinSystemGbmGLContext::BeginGuiComposite()
     CLog::Log(LOGDEBUG, "CWinSystemGbmGLContext: created GUI FBO {}x{}", width, height);
   }
 
+  // When GUI render is being skipped, leave the FBO bind/clear out: nothing
+  // will draw into it this frame.
+  if (!guiWillRender)
+    return true;
+
   if (!m_guiFbo.BeginRender())
     return false;
 
@@ -288,7 +295,8 @@ bool CWinSystemGbmGLContext::BeginGuiComposite()
 
 void CWinSystemGbmGLContext::EndGuiComposite()
 {
-  m_guiFbo.EndRender();
+  if (m_guiWillRender)
+    m_guiFbo.EndRender();
 
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
   glClear(GL_COLOR_BUFFER_BIT);
