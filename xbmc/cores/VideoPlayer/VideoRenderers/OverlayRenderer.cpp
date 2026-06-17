@@ -424,6 +424,30 @@ void CRenderer::CreateSubtitlesStyle()
 
 void CRenderer::PrepareOverlays(int idx)
 {
+  // Runs once per frame and marks the GUI dirty when the displayed subtitle
+  // (image PGS/DVB, DVD SPU, or libass text) appears, changes, or disappears,
+  // so renderers that skip the GUI render pass know to redraw it.
+  //
+  // Appearance/content change is signalled in the loop:
+  //   image/SPU : o.m_textureid == 0. A freshly decoded overlay starts at 0
+  //               and is only stamped with a nonzero texture-cache id once it
+  //               has been drawn (in Convert), so 0 means "not drawn yet" =
+  //               a new bitmap this frame that needs compositing.
+  //   libass    : currentChange > 0 (ass_render_frame's detect_change).
+  // Disappearance is the present->absent edge after the loop
+  // (m_prevHadImageSpu) -- only image/SPU needs it; a libass line ending is
+  // content going empty, already caught by currentChange.
+  //
+  // Whether the GUI render pass is skipped, and what then clears a vanished
+  // subtitle, depends on the renderer:
+  //
+  //   mode                            GUI skip?  vanished subtitle cleared by
+  //   ------------------------------  ---------  --------------------------------
+  //   GBM Direct-to-Plane             yes        DRM detach (CDRMAtomic::FlipPage)
+  //   GBM/GLES single-plane, SDR      no         GUI redraws every frame
+  //   GBM/GLES single-plane, HDR FBO  yes        the m_prevHadImageSpu edge below
+  //   Android MediaCodec surface      yes        the m_prevHadImageSpu edge below
+  //   webOS Starfish                  yes        the m_prevHadImageSpu edge below
   std::unique_lock lock(m_section);
   if (idx < 0 || idx >= NUM_BUFFERS)
     return;
@@ -589,9 +613,7 @@ void CRenderer::PrepareOverlays(int idx)
     }
   }
 
-  // PGS/DVB/SPU disappearance: arrival is caught by m_textureid==0 in
-  // the loop above. Without this, a PGS subtitle ending leaves its
-  // cached bitmap on the GUI plane until something else dirties.
+  // Image/SPU disappearance edge (see the note at the top of this function).
   if (hasImageSpu != m_prevHadImageSpu)
     doMarkDirty = true;
   m_prevHadImageSpu = hasImageSpu;
