@@ -149,11 +149,11 @@ void CDebugRenderer::CRenderer::Render(int idx, float depth)
       if (updateStyle)
         CreateSubtitlesStyle();
 
-      // Copied from OVERLAY::CRenderer::ConvertLibass. PR #28373 changed
-      // that function to read its libass output from a per-frame SElement
-      // populated by AddOverlay/Release. The debug overlay is added once
-      // at Initialize and never produces an SElement, so it cannot share
-      // the implementation.
+      // This duplicates the libass rendering in OVERLAY::CRenderer::ConvertLibass.
+      // That path reads pre-rendered libass output cached on a per-frame
+      // SElement by PrepareOverlays; the debug overlay is added once at
+      // Initialize, is not part of the per-frame overlay buffers, and so has
+      // no SElement to read from -- it must render libass itself here.
       KODI::SUBTITLES::STYLE::renderOpts rOpts;
       rOpts.sourceWidth = m_rs.Width();
       rOpts.sourceHeight = m_rs.Height();
