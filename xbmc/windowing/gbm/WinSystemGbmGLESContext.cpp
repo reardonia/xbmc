@@ -312,7 +312,7 @@ void CWinSystemGbmGLESContext::EndGuiComposite()
   // screen. Clearing it is pure waste. Gate on D2P because single-plane
   // never reaches !m_guiWillRender (the dirty-driven skip is gated on
   // IsRenderingVideoLayer()), so this is the only path that triggers.
-  const bool isD2P = m_DRM && m_DRM->GetVideoPlane() != nullptr && m_DRM->GetGuiPlane() != nullptr;
+  const bool isD2P = m_DRM->GetVideoPlane() != nullptr && m_DRM->GetGuiPlane() != nullptr;
   if (isD2P && !m_guiWillRender)
     return;
 
@@ -355,7 +355,7 @@ void CWinSystemGbmGLESContext::CompositeGui()
   // will skip eglSwapBuffers too (hasRendered==false because Render was not
   // called), and the display HW keeps scanning out the cached frame while the
   // video plane updates independently via atomic commit.
-  if (!m_guiWillRender && m_DRM && m_DRM->GetVideoPlane() != nullptr &&
+  if (!m_guiWillRender && m_DRM->GetVideoPlane() != nullptr &&
       m_DRM->GetGuiPlane() != nullptr)
     return;
 

@@ -319,7 +319,7 @@ void CWinSystemGbmGLContext::EndGuiComposite()
   // will skip eglSwapBuffers and the back-buffer contents never reach the
   // screen. Clearing it is pure waste. Single-plane never reaches
   // !m_guiWillRender, so the D2P gate is the only path that triggers.
-  const bool isD2P = m_DRM && m_DRM->GetVideoPlane() != nullptr && m_DRM->GetGuiPlane() != nullptr;
+  const bool isD2P = m_DRM->GetVideoPlane() != nullptr && m_DRM->GetGuiPlane() != nullptr;
   if (isD2P && !m_guiWillRender)
     return;
 
@@ -353,7 +353,7 @@ void CWinSystemGbmGLContext::CompositeGui()
   // back buffer from the prior composite. Skip the shader pass entirely; Flip
   // will skip eglSwapBuffers too (hasRendered==false), and the display HW keeps
   // scanning out the cached frame while the video plane updates independently.
-  if (!m_guiWillRender && m_DRM && m_DRM->GetVideoPlane() != nullptr &&
+  if (!m_guiWillRender && m_DRM->GetVideoPlane() != nullptr &&
       m_DRM->GetGuiPlane() != nullptr)
     return;
 
