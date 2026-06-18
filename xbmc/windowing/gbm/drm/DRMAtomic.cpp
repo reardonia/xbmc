@@ -123,6 +123,16 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
                 ->HasVisibleOverlay() &&
            !HasQuirk(QUIRK_NEEDSPRIMARY))
   {
+    // Dual-plane (DRMPRIME Direct-to-Plane) mode with nothing on the gui
+    // plane (no visible controls and no visible overlay): disable the gui
+    // plane to save scanout bandwidth while the video plane keeps updating on
+    // its own. Skip when the crtc requires a primary plane (amdgpu
+    // QUIRK_NEEDSPRIMARY) -- there the gui plane is the primary and disabling
+    // it would fail the commit.
+    //
+    // Gating on (m_gui_plane && m_video_plane) precisely matches dual-plane
+    // mode and rejects single-plane flip-flop mode where m_gui_plane is null
+    // (FindVideoPlane has adopted it as the video output plane).
     AddProperty(m_gui_plane, "FB_ID", 0);
     AddProperty(m_gui_plane, "CRTC_ID", 0);
   }
