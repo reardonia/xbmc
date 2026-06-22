@@ -81,6 +81,7 @@ cargo-c: pkg-config openssl rustup
 dpkg: automake gettext libtool pkg-config tar
 heimdal: libtool
 JsonSchemaBuilder: cmake
+SwigBindingsBuilder: cmake
 libjpeg-turbo: cmake nasm
 libpng: zlib automake
 libtool: automake
