@@ -253,6 +253,9 @@ void CPackerMAT::AppendData(const uint8_t* data, int size, Type type)
 
 int CPackerMAT::FillDataBuffer(const uint8_t* data, int size, Type type)
 {
+  // data may only be null for padding, which is written as zeros
+  assert(data != nullptr || type == Type::PADDING);
+
   if (GetCount() >= MAT_BUFFER_LIMIT)
     return size;
 
@@ -278,7 +281,7 @@ int CPackerMAT::FillDataBuffer(const uint8_t* data, int size, Type type)
 
     // write remaining data after the MAT marker
     if (remaining > 0)
-      remaining = FillDataBuffer(data + nBytesBefore, remaining, type);
+      remaining = FillDataBuffer(data ? data + nBytesBefore : nullptr, remaining, type);
 
     return remaining;
   }
