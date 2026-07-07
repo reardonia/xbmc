@@ -12,6 +12,7 @@
 
 #include "PackerMAT.h"
 
+#include "utils/BitstreamReader.h"
 #include "utils/log.h"
 
 #include <array>
@@ -65,11 +66,18 @@ bool CPackerMAT::PackTrueHD(const uint8_t* data, int size)
   if (size < 10)
     return false;
 
-  // get the ratebits from the major sync frame
-  if (AV_RB32(data + 4) == FORMAT_MAJOR_SYNC)
+  const bool isMajorSync = (AV_RB32(data + 4) == FORMAT_MAJOR_SYNC);
+
+  // On a major sync frame, parse the sync headers (and the restart header, when
+  // present) to obtain the sample rate bits and the output timing counter.
+  // output_timing is the authoritative stream position and is what allows a
+  // seamless branch point (a splice) to be recognized, which the input frame
+  // time alone cannot do reliably.
+  TrueHDMajorSyncInfo info;
+  if (isMajorSync)
   {
-    // read audio_sampling_frequency (high nibble after format major sync)
-    m_state.ratebits = data[8] >> 4;
+    info = ParseTrueHDMajorSyncHeaders(data, size);
+    m_state.ratebits = info.valid ? info.ratebits : (data[8] >> 4);
   }
   else if (!m_state.prevFrametimeValid)
   {
@@ -78,7 +86,41 @@ bool CPackerMAT::PackTrueHD(const uint8_t* data, int size)
   }
 
   const uint16_t frameTime = AV_RB16(data + 2);
+  const uint16_t frameSamples = 40 << (m_state.ratebits & 7);
   uint32_t spaceSize = 0;
+
+  // Advance the expected output timing and, if the reported value disagrees,
+  // treat it as a seamless branch point: carry the correct amount of padding
+  // forward to bridge the gap instead of dropping audio.
+  m_state.outputTiming += frameSamples;
+  if (info.outputTimingPresent)
+  {
+    if (m_state.outputTimingValid && info.outputTiming != m_state.outputTiming)
+    {
+      CLog::Log(LOGDEBUG,
+                "CPackerMAT::PackTrueHD: seamless branch point, expected outputTiming={}, actual={}",
+                m_state.outputTiming, info.outputTiming);
+
+      m_state.prevFrametimeValid = false;
+
+      // Nominal MAT space for one frame is 2560 bytes at every sample rate:
+      // frameSamples * (64 >> ratebits) == (40 << ratebits) * (64 >> ratebits) == 2560.
+      // NOTE: LAV Filters uses a bare 40 here, which under-pads 96/192 kHz.
+      spaceSize = frameSamples * (64 >> (m_state.ratebits & 7));
+
+      // output timing runs one frame ahead of frame time; bridge the padding
+      // from the difference between the previous and current frame offsets.
+      uint32_t prevOutput = static_cast<uint16_t>(info.outputTiming - frameSamples);
+      if (prevOutput < frameTime) // 16-bit counter wraps at 65536 (2^16), not 65535
+        prevOutput += 0x10000u;
+
+      const int32_t currentOffset = prevOutput - frameTime;
+      if (m_state.nOutputTimeOffset >= currentOffset)
+        m_state.padding += (m_state.nOutputTimeOffset - currentOffset) * (64 >> (m_state.ratebits & 7));
+    }
+    m_state.outputTiming = info.outputTiming;
+    m_state.outputTimingValid = true;
+  }
 
   // compute final padded size for the previous frame, if any
   if (m_state.prevFrametimeValid)
@@ -103,6 +145,17 @@ bool CPackerMAT::PackTrueHD(const uint8_t* data, int size)
     m_buffer.clear();
     m_bufferCount = 0;
     return false;
+  }
+
+  // record this frame's offset of frame time to output time, used to size the
+  // padding at the next discontinuity
+  if (m_state.outputTimingValid)
+  {
+    uint32_t prevOutput = static_cast<uint16_t>(m_state.outputTiming - frameSamples);
+    if (prevOutput < frameTime)
+      prevOutput += 0x10000u;
+
+    m_state.nOutputTimeOffset = prevOutput - frameTime;
   }
 
   // store frame time of the previous frame
@@ -325,4 +378,78 @@ void CPackerMAT::FlushPacket()
 
   m_buffer.clear();
   m_bufferCount = 0;
+}
+
+// Parse a TrueHD major sync frame to obtain the sample rate bits and, when a
+// restart header is present, the output timing counter used to detect seamless
+// branch points. The layout follows the MLP/TrueHD bitstream specification.
+CPackerMAT::TrueHDMajorSyncInfo CPackerMAT::ParseTrueHDMajorSyncHeaders(const uint8_t* p,
+                                                                       int buffsize) const
+{
+  TrueHDMajorSyncInfo info;
+
+  if (buffsize < 32)
+    return {};
+
+  // parse the major sync and check whether a restart header is present
+  int majorSyncSize = 28;
+  if (p[29] & 1) // restart header exists
+  {
+    const int extensionSize = p[30] >> 4;
+    majorSyncSize += 2 + extensionSize * 2;
+  }
+
+  // the computed header size must fit inside the packet, otherwise the reads
+  // below could run past the end on malformed input
+  if (majorSyncSize > buffsize)
+    return {};
+
+  CBitstreamReader bs(p + 4, buffsize - 4);
+
+  bs.SkipBits(32); // format_sync
+
+  info.ratebits = bs.ReadBits(4);
+  info.valid = true;
+
+  //  (1) 6ch_multichannel_type   (1) 8ch_multichannel_type   (2) reserved
+  //  (2) 2ch_presentation_channel_modifier
+  //  (2) 6ch_presentation_channel_modifier
+  //  (5) 6ch_presentation_channel_assignment
+  //  (2) 8ch_presentation_channel_modifier
+  // (13) 8ch_presentation_channel_assignment
+  // (16) signature   (16) flags   (16) reserved
+  //  (1) variable_rate   (15) peak_data_rate
+  bs.SkipBits(1 + 1 + 2 + 2 + 2 + 5 + 2 + 13 + 16 + 16 + 16 + 1 + 15);
+
+  const int numSubstreams = bs.ReadBits(4);
+
+  bs.SkipBits(4 + (majorSyncSize - 17) * 8);
+
+  // substream directory
+  for (int i = 0; i < numSubstreams; i++)
+  {
+    const int extraSubstreamWord = bs.ReadBits(1);
+    //  (1) restart_nonexistent   (1) crc_present   (1) reserved
+    // (12) substream_end_ptr
+    bs.SkipBits(15);
+    if (extraSubstreamWord)
+      bs.SkipBits(16); // drc_gain_update, drc_time_update, reserved
+  }
+
+  // substream segments (only the first substream's restart header is needed)
+  for (int i = 0; i < numSubstreams; i++)
+  {
+    if (bs.ReadBits(1)) // block_header_exists
+    {
+      if (bs.ReadBits(1)) // restart_header_exists
+      {
+        bs.SkipBits(14); // restart_sync_word
+        info.outputTiming = bs.ReadBits(16);
+        info.outputTimingPresent = true;
+      }
+    }
+    break;
+  }
+
+  return info;
 }

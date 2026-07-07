@@ -32,6 +32,14 @@ public:
   std::vector<uint8_t> GetOutputFrame();
 
 private:
+  struct TrueHDMajorSyncInfo
+  {
+    int ratebits{0};
+    uint16_t outputTiming{0};
+    bool outputTimingPresent{false};
+    bool valid{false};
+  };
+
   struct MATState
   {
     bool init; // differentiates the first header
@@ -53,6 +61,11 @@ private:
     uint32_t prevMatFramesize; // size in bytes of previous MAT frame
 
     uint32_t padding; // padding bytes pending to write
+
+    // TrueHD output timing (in samples) used to detect seamless branch points
+    uint16_t outputTiming;
+    bool outputTimingValid;
+    int32_t nOutputTimeOffset; // frame time to output time offset for branch padding
   };
 
   void WriteHeader();
@@ -61,6 +74,7 @@ private:
   uint32_t GetCount() const { return m_bufferCount; }
   int FillDataBuffer(const uint8_t* data, int size, Type type);
   void FlushPacket();
+  TrueHDMajorSyncInfo ParseTrueHDMajorSyncHeaders(const uint8_t* p, int buffsize) const;
 
   MATState m_state{};
 
