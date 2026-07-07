@@ -1,9 +1,13 @@
 /*
  *  Copyright (C) 2024 Team Kodi
+ *  Copyright (C) 2010-2021 Hendrik Leppkes <h.leppkes@gmail.com>
  *  This file is part of Kodi - https://kodi.tv
  *
  *  SPDX-License-Identifier: GPL-2.0-or-later
  *  See LICENSES/README.md for more information.
+ *
+ *  Derived from the TrueHD MAT packer in LAV Filters by Hendrik Leppkes
+ *  (Nevcairiel), decoder/LAVAudio/BitstreamMAT.cpp.
  */
 
 #include "PackerMAT.h"
