@@ -787,6 +787,10 @@ namespace XBMCAddon
 
     void ListItem::setAvailableFanart(const std::vector<Properties>& images)
     {
+      CLog::Log(LOGWARNING,
+                "ListItem.setAvailableFanart() is deprecated and might be removed in future Kodi "
+                "versions. Please use InfoTagVideo.setAvailableFanart().");
+
       XBMCAddonUtils::GuiLock lock(languageHook, m_offscreen);
       auto infoTag = GetVideoInfoTag();
       infoTag->m_fanart.Clear();
