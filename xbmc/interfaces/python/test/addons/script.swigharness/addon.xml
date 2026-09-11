@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="script.swigharness" version="1.0.0" name="SWIG binding harness" provider-name="reardonia">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+  </requires>
+  <extension point="xbmc.python.script" library="default.py"/>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">Acceptance gate for the python binding layer</summary>
+    <description lang="en_GB">Exercises every type shape, lifetime rule and callback path that crosses the python/C++ boundary. Writes special://temp/swigharness-result.txt.</description>
+    <platform>all</platform>
+  </extension>
+</addon>

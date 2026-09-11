@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window>
+  <defaultcontrol always="true">100</defaultcontrol>
+  <controls>
+    <control type="button" id="100">
+      <left>10</left>
+      <top>10</top>
+      <width>200</width>
+      <height>40</height>
+      <label>harness</label>
+    </control>
+  </controls>
+</window>

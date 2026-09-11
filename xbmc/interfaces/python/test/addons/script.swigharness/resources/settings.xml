@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings version="1">
+  <section id="swigharness">
+    <category id="lists" label="Lists">
+      <group id="1">
+        <setting id="boollist" type="list[boolean]" label="boollist">
+          <constraints><delimiter>,</delimiter></constraints>
+          <level>0</level>
+          <default>true,false,true</default>
+          <control type="list" format="string"><multiselect>true</multiselect></control>
+        </setting>
+        <setting id="intlist" type="list[integer]" label="intlist">
+          <constraints><delimiter>,</delimiter></constraints>
+          <level>0</level>
+          <default>1,2,3</default>
+          <control type="list" format="string"><multiselect>true</multiselect></control>
+        </setting>
+        <setting id="numlist" type="list[number]" label="numlist">
+          <constraints><delimiter>,</delimiter></constraints>
+          <level>0</level>
+          <default>1.5,2.5</default>
+          <control type="list" format="string"><multiselect>true</multiselect></control>
+        </setting>
+        <setting id="strlist" type="list[string]" label="strlist">
+          <constraints><delimiter>,</delimiter></constraints>
+          <level>0</level>
+          <default>a,b</default>
+          <control type="list" format="string"><multiselect>true</multiselect></control>
+        </setting>
+      </group>
+    </category>
+  </section>
+</settings>

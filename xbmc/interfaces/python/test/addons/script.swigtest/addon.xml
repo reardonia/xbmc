@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="script.swigtest" version="1.0.0" name="SWIG bindings test" provider-name="reardonia">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+  </requires>
+  <extension point="xbmc.python.script" library="default.py"/>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">Exercises the python bindings</summary>
+    <platform>all</platform>
+  </extension>
+</addon>
